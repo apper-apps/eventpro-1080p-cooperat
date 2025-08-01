@@ -1,89 +1,293 @@
-import eventsData from "@/services/mockData/events.json";
-
 class EventService {
   constructor() {
-    this.events = [...eventsData];
-  }
-
-  async delay(ms = 300) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    // Initialize ApperClient
+    const { ApperClient } = window.ApperSDK;
+    this.apperClient = new ApperClient({
+      apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+      apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+    });
+    this.tableName = 'event';
   }
 
   async getAll() {
-    await this.delay();
-    return [...this.events];
+    try {
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "title" } },
+          { field: { Name: "date" } },
+          { field: { Name: "description" } },
+          { field: { Name: "budget" } },
+          { field: { Name: "status" } },
+          { field: { Name: "createdAt" } },
+          { field: { Name: "updatedAt" } },
+          { field: { Name: "Tags" } },
+          { field: { Name: "Owner" } }
+        ],
+        orderBy: [
+          {
+            fieldName: "createdAt",
+            sorttype: "DESC"
+          }
+        ]
+      };
+
+      const response = await this.apperClient.fetchRecords(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        return [];
+      }
+
+      return response.data || [];
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error fetching events:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      return [];
+    }
   }
 
   async getById(id) {
-    await this.delay();
-    const event = this.events.find(e => e.Id === parseInt(id));
-    return event ? { ...event } : null;
+    try {
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "title" } },
+          { field: { Name: "date" } },
+          { field: { Name: "description" } },
+          { field: { Name: "budget" } },
+          { field: { Name: "status" } },
+          { field: { Name: "createdAt" } },
+          { field: { Name: "updatedAt" } },
+          { field: { Name: "Tags" } },
+          { field: { Name: "Owner" } }
+        ]
+      };
+
+      const response = await this.apperClient.getRecordById(this.tableName, parseInt(id), params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        return null;
+      }
+
+      return response.data;
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error(`Error fetching event with ID ${id}:`, error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      return null;
+    }
   }
 
   async create(eventData) {
-    await this.delay();
-    const maxId = Math.max(...this.events.map(e => e.Id), 0);
-    const newEvent = {
-      Id: maxId + 1,
-      ...eventData,
-      status: "Planning",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    this.events.push(newEvent);
-    return { ...newEvent };
+    try {
+      const params = {
+        records: [
+          {
+            title: eventData.title,
+            date: eventData.date,
+            description: eventData.description,
+            budget: parseFloat(eventData.budget),
+            status: eventData.status || "Planning"
+          }
+        ]
+      };
+
+      const response = await this.apperClient.createRecord(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        return null;
+      }
+
+      if (response.results) {
+        const successfulRecords = response.results.filter(result => result.success);
+        const failedRecords = response.results.filter(result => !result.success);
+        
+        if (failedRecords.length > 0) {
+          console.error(`Failed to create events ${failedRecords.length} records:${JSON.stringify(failedRecords)}`);
+        }
+        
+        return successfulRecords.length > 0 ? successfulRecords[0].data : null;
+      }
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error creating event:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      return null;
+    }
   }
 
   async update(id, updateData) {
-    await this.delay();
-    const index = this.events.findIndex(e => e.Id === parseInt(id));
-    if (index === -1) return null;
-    
-    this.events[index] = {
-      ...this.events[index],
-      ...updateData,
-      updatedAt: new Date().toISOString()
-    };
-    return { ...this.events[index] };
+    try {
+      const params = {
+        records: [
+          {
+            Id: parseInt(id),
+            ...(updateData.title && { title: updateData.title }),
+            ...(updateData.date && { date: updateData.date }),
+            ...(updateData.description && { description: updateData.description }),
+            ...(updateData.budget && { budget: parseFloat(updateData.budget) }),
+            ...(updateData.status && { status: updateData.status })
+          }
+        ]
+      };
+
+      const response = await this.apperClient.updateRecord(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        return null;
+      }
+
+      if (response.results) {
+        const successfulUpdates = response.results.filter(result => result.success);
+        const failedUpdates = response.results.filter(result => !result.success);
+        
+        if (failedUpdates.length > 0) {
+          console.error(`Failed to update events ${failedUpdates.length} records:${failedUpdates}`);
+        }
+        
+        return successfulUpdates.length > 0 ? successfulUpdates[0].data : null;
+      }
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error updating event:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      return null;
+    }
   }
 
   async delete(id) {
-    await this.delay();
-    const index = this.events.findIndex(e => e.Id === parseInt(id));
-    if (index === -1) return false;
-    
-    this.events.splice(index, 1);
-    return true;
+    try {
+      const params = {
+        RecordIds: [parseInt(id)]
+      };
+
+      const response = await this.apperClient.deleteRecord(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        return false;
+      }
+
+      if (response.results) {
+        const successfulDeletions = response.results.filter(result => result.success);
+        const failedDeletions = response.results.filter(result => !result.success);
+        
+        if (failedDeletions.length > 0) {
+          console.error(`Failed to delete events ${failedDeletions.length} records:${failedDeletions}`);
+        }
+        
+        return successfulDeletions.length > 0;
+      }
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error deleting event:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      return false;
+    }
   }
 
   async getUpcoming() {
-    await this.delay();
-    const now = new Date();
-    return this.events
-      .filter(event => new Date(event.date) > now && event.status !== "Cancelled")
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    try {
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "title" } },
+          { field: { Name: "date" } },
+          { field: { Name: "description" } },
+          { field: { Name: "budget" } },
+          { field: { Name: "status" } },
+          { field: { Name: "createdAt" } },
+          { field: { Name: "updatedAt" } }
+        ],
+        where: [
+          {
+            FieldName: "date",
+            Operator: "GreaterThan",
+            Values: [new Date().toISOString()]
+          },
+          {
+            FieldName: "status",
+            Operator: "NotEqualTo",
+            Values: ["Cancelled"]
+          }
+        ],
+        orderBy: [
+          {
+            fieldName: "date",
+            sorttype: "ASC"
+          }
+        ]
+      };
+
+      const response = await this.apperClient.fetchRecords(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        return [];
+      }
+
+      return response.data || [];
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error fetching upcoming events:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      return [];
+    }
   }
 
   async getStats() {
-    await this.delay();
-    const now = new Date();
-    const totalEvents = this.events.length;
-    const upcomingEvents = this.events.filter(
-      event => new Date(event.date) > now && event.status !== "Cancelled"
-    ).length;
-    const completedEvents = this.events.filter(
-      event => event.status === "Completed"
-    ).length;
-    const activeEvents = this.events.filter(
-event => event.status === "In Progress"
-    ).length;
+    try {
+      // Get all events for statistics calculation
+      const allEvents = await this.getAll();
+      const now = new Date();
+      
+      const totalEvents = allEvents.length;
+      const upcomingEvents = allEvents.filter(
+        event => new Date(event.date) > now && event.status !== "Cancelled"
+      ).length;
+      const completedEvents = allEvents.filter(
+        event => event.status === "Completed"
+      ).length;
+      const activeEvents = allEvents.filter(
+        event => event.status === "In Progress"
+      ).length;
 
-    return {
-      totalEvents,
-      upcomingEvents,
-      completedEvents,
-      activeEvents
-    };
+      return {
+        totalEvents,
+        upcomingEvents,
+        completedEvents,
+        activeEvents
+      };
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error fetching event stats:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      return {
+        totalEvents: 0,
+        upcomingEvents: 0,
+        completedEvents: 0,
+        activeEvents: 0
+      };
+    }
   }
 }
 

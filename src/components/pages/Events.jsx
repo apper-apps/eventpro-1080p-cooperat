@@ -25,11 +25,18 @@ const [events, setEvents] = useState([]);
       setLoading(true);
       setError("");
       const data = await eventService.getAll();
-      setEvents(data);
-      setFilteredEvents(data);
+      if (!data || data.length === 0) {
+        setEvents([]);
+        setFilteredEvents([]);
+      } else {
+        setEvents(data);
+        setFilteredEvents(data);
+      }
     } catch (err) {
       setError("Failed to load events");
       console.error("Events error:", err);
+      setEvents([]);
+      setFilteredEvents([]);
     } finally {
       setLoading(false);
     }
@@ -69,8 +76,12 @@ const [events, setEvents] = useState([]);
 const handleCreateEvent = async (eventData) => {
     try {
       const newEvent = await eventService.create(eventData);
-      setEvents(prev => [newEvent, ...prev]);
-      toast.success("Event created successfully!");
+      if (newEvent) {
+        setEvents(prev => [newEvent, ...prev]);
+        toast.success("Event created successfully!");
+      } else {
+        toast.error("Failed to create event");
+      }
     } catch (err) {
       toast.error("Failed to create event");
       console.error("Create event error:", err);
@@ -80,11 +91,15 @@ const handleCreateEvent = async (eventData) => {
   const handleEditEvent = async (eventData) => {
     try {
       const updatedEvent = await eventService.update(editingEvent.Id, eventData);
-      setEvents(prev => prev.map(event => 
-        event.Id === editingEvent.Id ? updatedEvent : event
-      ));
-      toast.success("Event updated successfully!");
-      setEditingEvent(null);
+      if (updatedEvent) {
+        setEvents(prev => prev.map(event => 
+          event.Id === editingEvent.Id ? updatedEvent : event
+        ));
+        toast.success("Event updated successfully!");
+        setEditingEvent(null);
+      } else {
+        toast.error("Failed to update event");
+      }
     } catch (err) {
       toast.error("Failed to update event");
       console.error("Update event error:", err);
@@ -111,7 +126,7 @@ const handleCreateEvent = async (eventData) => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Events</h1>
-        <Button onClick={() => setIsModalOpen(true)}>
+<Button onClick={() => setIsModalOpen(true)}>
           <ApperIcon name="Plus" className="h-4 w-4 mr-2" />
           Create Event
         </Button>

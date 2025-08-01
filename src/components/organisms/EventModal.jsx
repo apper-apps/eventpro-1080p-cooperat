@@ -13,7 +13,7 @@ const EventModal = ({ isOpen, onClose, onSubmit, event = null, mode = 'create' }
     status: "Planning"
   });
 
-  // Initialize form data when event prop changes
+// Initialize form data when event prop changes
   useEffect(() => {
     if (event && mode === 'edit') {
       setFormData({
@@ -73,7 +73,7 @@ const EventModal = ({ isOpen, onClose, onSubmit, event = null, mode = 'create' }
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
       onSubmit({
@@ -84,19 +84,21 @@ const EventModal = ({ isOpen, onClose, onSubmit, event = null, mode = 'create' }
         title: "",
         date: "",
         description: "",
-        budget: ""
+        budget: "",
+        status: "Planning"
       });
       setErrors({});
       onClose();
     }
   };
 
-  const handleClose = () => {
+const handleClose = () => {
     setFormData({
       title: "",
       date: "",
       description: "",
-      budget: ""
+      budget: "",
+      status: "Planning"
     });
     setErrors({});
     onClose();
@@ -107,8 +109,8 @@ const EventModal = ({ isOpen, onClose, onSubmit, event = null, mode = 'create' }
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-<h2 className="text-xl font-semibold text-gray-900">
+<div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">
             {mode === 'edit' ? 'Edit Event' : 'Create New Event'}
           </h2>
           <Button variant="ghost" size="sm" onClick={handleClose}>
@@ -162,9 +164,8 @@ const EventModal = ({ isOpen, onClose, onSubmit, event = null, mode = 'create' }
             value={formData.budget}
             onChange={handleChange}
             placeholder="0.00"
-            error={errors.budget}
-/>
-
+error={errors.budget}
+          />
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Status</label>
             <select
@@ -172,8 +173,8 @@ const EventModal = ({ isOpen, onClose, onSubmit, event = null, mode = 'create' }
               value={formData.status}
               onChange={handleChange}
               className="flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
-<option value="Planning">Planning</option>
+>
+              <option value="Planning">Planning</option>
               <option value="In Progress">In Progress</option>
               <option value="Completed">Completed</option>
               <option value="Cancelled">Cancelled</option>
@@ -183,8 +184,8 @@ const EventModal = ({ isOpen, onClose, onSubmit, event = null, mode = 'create' }
           <div className="flex justify-end space-x-3 pt-4">
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
-            </Button>
-<Button type="submit">
+</Button>
+            <Button type="submit">
               {mode === 'edit' ? 'Save Changes' : 'Create Event'}
             </Button>
           </div>

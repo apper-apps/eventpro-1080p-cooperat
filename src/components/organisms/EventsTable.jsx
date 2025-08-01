@@ -1,9 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { format } from "date-fns";
+import ApperIcon from "@/components/ApperIcon";
 import Badge from "@/components/atoms/Badge";
 import Button from "@/components/atoms/Button";
-import ApperIcon from "@/components/ApperIcon";
-import { format } from "date-fns";
 const EventsTable = ({ events, onDelete, onEdit }) => {
 const getStatusVariant = (status) => {
     switch (status) {
@@ -17,7 +17,7 @@ const getStatusVariant = (status) => {
         return "cancelled";
       default:
         return "default";
-    }
+}
   };
 
   const formatCurrency = (amount) => {
@@ -51,7 +51,7 @@ const getStatusVariant = (status) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {events.map((event) => (
+{events.map((event) => (
 <tr key={event.Id} className="hover:bg-gray-50 transition-colors duration-150">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div>
@@ -74,12 +74,12 @@ const getStatusVariant = (status) => {
                     {event.status}
                   </Badge>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {formatCurrency(event.budget)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex space-x-2">
-<Button 
+                    <Button
                       variant="ghost" 
                       size="sm"
                       onClick={() => onEdit(event)}

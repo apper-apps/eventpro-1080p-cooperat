@@ -1,8 +1,12 @@
-import expensesData from "@/services/mockData/expenses.json";
-
 class ExpenseService {
   constructor() {
-    this.expenses = [...expensesData];
+    // Initialize ApperClient
+    const { ApperClient } = window.ApperSDK;
+    this.apperClient = new ApperClient({
+      apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+      apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+    });
+    this.tableName = 'expense';
     this.categories = [
       "Venue",
       "Catering", 
@@ -13,101 +17,296 @@ class ExpenseService {
     ];
   }
 
-  async delay(ms = 300) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
   async getAll() {
-    await this.delay();
-    return [...this.expenses];
+    try {
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "description" } },
+          { field: { Name: "amount" } },
+          { field: { Name: "category" } },
+          { field: { Name: "date" } },
+          { field: { Name: "eventId" } },
+          { field: { Name: "createdAt" } },
+          { field: { Name: "Tags" } },
+          { field: { Name: "Owner" } }
+        ],
+        orderBy: [
+          {
+            fieldName: "date",
+            sorttype: "DESC"
+          }
+        ]
+      };
+
+      const response = await this.apperClient.fetchRecords(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        return [];
+      }
+
+      return response.data || [];
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error fetching expenses:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      return [];
+    }
   }
 
   async getById(id) {
-    await this.delay();
-    const expense = this.expenses.find(e => e.Id === parseInt(id));
-    return expense ? { ...expense } : null;
+    try {
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "description" } },
+          { field: { Name: "amount" } },
+          { field: { Name: "category" } },
+          { field: { Name: "date" } },
+          { field: { Name: "eventId" } },
+          { field: { Name: "createdAt" } },
+          { field: { Name: "Tags" } },
+          { field: { Name: "Owner" } }
+        ]
+      };
+
+      const response = await this.apperClient.getRecordById(this.tableName, parseInt(id), params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        return null;
+      }
+
+      return response.data;
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error(`Error fetching expense with ID ${id}:`, error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      return null;
+    }
   }
 
   async getByEventId(eventId) {
-    await this.delay();
-    return this.expenses
-      .filter(expense => expense.eventId === parseInt(eventId))
-      .map(expense => ({ ...expense }));
+    try {
+      const params = {
+        fields: [
+          { field: { Name: "Name" } },
+          { field: { Name: "description" } },
+          { field: { Name: "amount" } },
+          { field: { Name: "category" } },
+          { field: { Name: "date" } },
+          { field: { Name: "eventId" } }
+        ],
+        where: [
+          {
+            FieldName: "eventId",
+            Operator: "EqualTo",
+            Values: [parseInt(eventId)]
+          }
+        ],
+        orderBy: [
+          {
+            fieldName: "date",
+            sorttype: "DESC"
+          }
+        ]
+      };
+
+      const response = await this.apperClient.fetchRecords(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        return [];
+      }
+
+      return response.data || [];
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error fetching expenses by event ID:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      return [];
+    }
   }
 
   async create(expenseData) {
-    await this.delay();
-    
-    // Validate required fields
-    if (!expenseData.eventId) {
-      throw new Error("Event ID is required");
-    }
-    if (!expenseData.description?.trim()) {
-      throw new Error("Description is required");
-    }
-    if (!expenseData.amount || expenseData.amount <= 0) {
-      throw new Error("Amount must be greater than 0");
-    }
-    if (!expenseData.category) {
-      throw new Error("Category is required");
-    }
-    if (!this.categories.includes(expenseData.category)) {
-      throw new Error("Invalid category");
-    }
+    try {
+      // Validate required fields
+      if (!expenseData.eventId) {
+        throw new Error("Event ID is required");
+      }
+      if (!expenseData.description?.trim()) {
+        throw new Error("Description is required");
+      }
+      if (!expenseData.amount || expenseData.amount <= 0) {
+        throw new Error("Amount must be greater than 0");
+      }
+      if (!expenseData.category) {
+        throw new Error("Category is required");
+      }
+      if (!this.categories.includes(expenseData.category)) {
+        throw new Error("Invalid category");
+      }
 
-    const maxId = Math.max(...this.expenses.map(e => e.Id), 0);
-    const newExpense = {
-      Id: maxId + 1,
-      eventId: parseInt(expenseData.eventId),
-      description: expenseData.description.trim(),
-      amount: parseFloat(expenseData.amount),
-      category: expenseData.category,
-      date: expenseData.date || new Date().toISOString(),
-      createdAt: new Date().toISOString()
-    };
-    
-    this.expenses.push(newExpense);
-    return { ...newExpense };
+      const params = {
+        records: [
+          {
+            description: expenseData.description.trim(),
+            amount: parseFloat(expenseData.amount),
+            category: expenseData.category,
+            date: expenseData.date || new Date().toISOString(),
+            eventId: parseInt(expenseData.eventId)
+          }
+        ]
+      };
+
+      const response = await this.apperClient.createRecord(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      if (response.results) {
+        const successfulRecords = response.results.filter(result => result.success);
+        const failedRecords = response.results.filter(result => !result.success);
+        
+        if (failedRecords.length > 0) {
+          console.error(`Failed to create expenses ${failedRecords.length} records:${JSON.stringify(failedRecords)}`);
+          
+          failedRecords.forEach(record => {
+            record.errors?.forEach(error => {
+              throw new Error(`${error.fieldLabel}: ${error.message}`);
+            });
+            if (record.message) throw new Error(record.message);
+          });
+        }
+        
+        return successfulRecords.length > 0 ? successfulRecords[0].data : null;
+      }
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error creating expense:", error?.response?.data?.message);
+        throw new Error(error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+        throw error;
+      }
+    }
   }
 
   async update(id, updateData) {
-    await this.delay();
-    const index = this.expenses.findIndex(e => e.Id === parseInt(id));
-    if (index === -1) return null;
+    try {
+      // Validate if provided
+      if (updateData.description !== undefined && !updateData.description.trim()) {
+        throw new Error("Description cannot be empty");
+      }
+      if (updateData.amount !== undefined && (updateData.amount <= 0 || isNaN(updateData.amount))) {
+        throw new Error("Amount must be greater than 0");
+      }
+      if (updateData.category && !this.categories.includes(updateData.category)) {
+        throw new Error("Invalid category");
+      }
 
-    // Validate if provided
-    if (updateData.description !== undefined && !updateData.description.trim()) {
-      throw new Error("Description cannot be empty");
-    }
-    if (updateData.amount !== undefined && (updateData.amount <= 0 || isNaN(updateData.amount))) {
-      throw new Error("Amount must be greater than 0");
-    }
-    if (updateData.category && !this.categories.includes(updateData.category)) {
-      throw new Error("Invalid category");
-    }
+      const params = {
+        records: [
+          {
+            Id: parseInt(id),
+            ...(updateData.description && { description: updateData.description.trim() }),
+            ...(updateData.amount && { amount: parseFloat(updateData.amount) }),
+            ...(updateData.category && { category: updateData.category }),
+            ...(updateData.date && { date: updateData.date }),
+            ...(updateData.eventId && { eventId: parseInt(updateData.eventId) })
+          }
+        ]
+      };
 
-    this.expenses[index] = {
-      ...this.expenses[index],
-      ...updateData,
-      amount: updateData.amount ? parseFloat(updateData.amount) : this.expenses[index].amount,
-      description: updateData.description ? updateData.description.trim() : this.expenses[index].description
-    };
-    return { ...this.expenses[index] };
+      const response = await this.apperClient.updateRecord(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        throw new Error(response.message);
+      }
+
+      if (response.results) {
+        const successfulUpdates = response.results.filter(result => result.success);
+        const failedUpdates = response.results.filter(result => !result.success);
+        
+        if (failedUpdates.length > 0) {
+          console.error(`Failed to update expenses ${failedUpdates.length} records:${failedUpdates}`);
+          
+          failedUpdates.forEach(record => {
+            record.errors?.forEach(error => {
+              throw new Error(`${error.fieldLabel}: ${error.message}`);
+            });
+            if (record.message) throw new Error(record.message);
+          });
+        }
+        
+        return successfulUpdates.length > 0 ? successfulUpdates[0].data : null;
+      }
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error updating expense:", error?.response?.data?.message);
+        throw new Error(error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+        throw error;
+      }
+    }
   }
 
   async delete(id) {
-    await this.delay();
-    const index = this.expenses.findIndex(e => e.Id === parseInt(id));
-    if (index === -1) return false;
-    
-    this.expenses.splice(index, 1);
-    return true;
+    try {
+      const params = {
+        RecordIds: [parseInt(id)]
+      };
+
+      const response = await this.apperClient.deleteRecord(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        return false;
+      }
+
+      if (response.results) {
+        const successfulDeletions = response.results.filter(result => result.success);
+        const failedDeletions = response.results.filter(result => !result.success);
+        
+        if (failedDeletions.length > 0) {
+          console.error(`Failed to delete expenses ${failedDeletions.length} records:${failedDeletions}`);
+        }
+        
+        return successfulDeletions.length > 0;
+      }
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error deleting expense:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      return false;
+    }
   }
 
   async getTotalByEventId(eventId) {
-    await this.delay();
-    const eventExpenses = this.expenses.filter(e => e.eventId === parseInt(eventId));
-    return eventExpenses.reduce((total, expense) => total + expense.amount, 0);
+    try {
+      const eventExpenses = await this.getByEventId(eventId);
+      return eventExpenses.reduce((total, expense) => total + expense.amount, 0);
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error calculating total expenses:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      return 0;
+    }
   }
 
   getCategories() {
@@ -115,19 +314,27 @@ class ExpenseService {
   }
 
   async getExpensesByCategory(eventId) {
-    await this.delay();
-    const eventExpenses = this.expenses.filter(e => e.eventId === parseInt(eventId));
-    const categoryTotals = {};
-    
-    this.categories.forEach(category => {
-      categoryTotals[category] = 0;
-    });
-    
-    eventExpenses.forEach(expense => {
-      categoryTotals[expense.category] += expense.amount;
-    });
-    
-    return categoryTotals;
+    try {
+      const eventExpenses = await this.getByEventId(eventId);
+      const categoryTotals = {};
+      
+      this.categories.forEach(category => {
+        categoryTotals[category] = 0;
+      });
+      
+      eventExpenses.forEach(expense => {
+        categoryTotals[expense.category] += expense.amount;
+      });
+      
+      return categoryTotals;
+    } catch (error) {
+      if (error?.response?.data?.message) {
+        console.error("Error getting expenses by category:", error?.response?.data?.message);
+      } else {
+        console.error(error.message);
+      }
+      return {};
+    }
   }
 }
 

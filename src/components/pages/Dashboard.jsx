@@ -26,19 +26,36 @@ const Dashboard = () => {
         eventService.getUpcoming()
       ]);
       
-      setStats(statsData);
-      setUpcomingEvents(upcomingData.slice(0, 5)); // Show only 5 upcoming events
+      if (!statsData) {
+        setStats({
+          totalEvents: 0,
+          upcomingEvents: 0,
+          completedEvents: 0,
+          activeEvents: 0
+        });
+      } else {
+        setStats(statsData);
+      }
+      
+      if (!upcomingData || upcomingData.length === 0) {
+        setUpcomingEvents([]);
+      } else {
+        setUpcomingEvents(upcomingData.slice(0, 5)); // Show only 5 upcoming events
+      }
     } catch (err) {
       setError("Failed to load dashboard data");
       console.error("Dashboard error:", err);
+      setStats({
+        totalEvents: 0,
+        upcomingEvents: 0,
+        completedEvents: 0,
+        activeEvents: 0
+      });
+      setUpcomingEvents([]);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
 
   if (loading) return <Loading />;
   if (error) return <Error message={error} onRetry={loadDashboardData} />;

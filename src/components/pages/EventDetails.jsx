@@ -1,25 +1,27 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import Button from "@/components/atoms/Button";
-import Card from "@/components/atoms/Card";
-import Badge from "@/components/atoms/Badge";
-import Loading from "@/components/ui/Loading";
-import Error from "@/components/ui/Error";
-import ApperIcon from "@/components/ApperIcon";
-import EventModal from "@/components/organisms/EventModal";
-import eventService from "@/services/api/eventService";
-import taskService from "@/services/api/taskService";
-import expenseService from "@/services/api/expenseService";
-import FormField from "@/components/molecules/FormField";
-import Input from "@/components/atoms/Input";
-import Label from "@/components/atoms/Label";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { toast } from "react-toastify";
+import taskService from "@/services/api/taskService";
+import eventService from "@/services/api/eventService";
+import expenseService from "@/services/api/expenseService";
+import ApperIcon from "@/components/ApperIcon";
+import FormField from "@/components/molecules/FormField";
+import EventModal from "@/components/organisms/EventModal";
+import Loading from "@/components/ui/Loading";
+import Error from "@/components/ui/Error";
+import Events from "@/components/pages/Events";
+import Tasks from "@/components/pages/Tasks";
+import Badge from "@/components/atoms/Badge";
+import Input from "@/components/atoms/Input";
+import Button from "@/components/atoms/Button";
+import Label from "@/components/atoms/Label";
+import Card from "@/components/atoms/Card";
 
 const EventDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-const [event, setEvent] = useState(null);
+  const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editingEvent, setEditingEvent] = useState(null);
@@ -51,10 +53,16 @@ const loadEvent = async () => {
       setLoading(true);
       setError("");
       const eventData = await eventService.getById(parseInt(id));
-      setEvent(eventData);
+      if (!eventData) {
+        setError("Event not found");
+        setEvent(null);
+      } else {
+        setEvent(eventData);
+      }
     } catch (err) {
       setError("Failed to load event details");
       console.error("Event details error:", err);
+      setEvent(null);
     } finally {
       setLoading(false);
     }
@@ -87,12 +95,16 @@ const loadTasks = async () => {
     }
   };
 
-  const handleEditEvent = async (eventData) => {
+const handleEditEvent = async (eventData) => {
     try {
       const updatedEvent = await eventService.update(event.Id, eventData);
-      setEvent(updatedEvent);
-      toast.success("Event updated successfully!");
-      setEditingEvent(null);
+      if (updatedEvent) {
+        setEvent(updatedEvent);
+        toast.success("Event updated successfully!");
+        setEditingEvent(null);
+      } else {
+        toast.error("Failed to update event");
+      }
     } catch (err) {
       toast.error("Failed to update event");
       console.error("Update event error:", err);
@@ -101,11 +113,15 @@ const loadTasks = async () => {
 
   const handleToggleTask = async (taskId, completed) => {
     try {
-      await taskService.update(taskId, { completed: !completed });
-      setTasks(prev => prev.map(task =>
-        task.Id === taskId ? { ...task, completed: !completed } : task
-      ));
-      toast.success(completed ? "Task marked as incomplete" : "Task completed!");
+      const updatedTask = await taskService.update(taskId, { completed: !completed });
+      if (updatedTask) {
+        setTasks(prev => prev.map(task =>
+          task.Id === taskId ? { ...task, completed: !completed } : task
+        ));
+        toast.success(completed ? "Task marked as incomplete" : "Task completed!");
+      } else {
+        toast.error("Failed to update task");
+      }
     } catch (err) {
       toast.error("Failed to update task");
       console.error("Update task error:", err);
@@ -138,11 +154,15 @@ const handleCreateTask = async () => {
           eventId: event.Id
         });
         
-        setTasks(prev => [...prev, newTask]);
-        setTaskFormData({ title: "", description: "", dueDate: "" });
-        setTaskFormErrors({});
-        setShowTaskModal(false);
-        toast.success("Task created successfully!");
+        if (newTask) {
+          setTasks(prev => [...prev, newTask]);
+          setTaskFormData({ title: "", description: "", dueDate: "" });
+          setTaskFormErrors({});
+          setShowTaskModal(false);
+          toast.success("Task created successfully!");
+        } else {
+          toast.error("Failed to create task");
+        }
       } catch (err) {
         toast.error("Failed to create task");
         console.error("Create task error:", err);
@@ -165,7 +185,7 @@ const handleCreateTask = async () => {
   };
 
   // Expense handlers
-  const handleCreateExpense = async () => {
+const handleCreateExpense = async () => {
     const newErrors = {};
     
     if (!expenseFormData.description.trim()) {
@@ -198,12 +218,20 @@ const handleCreateTask = async () => {
 
         if (editingExpense) {
           const updatedExpense = await expenseService.update(editingExpense.Id, expenseData);
-          setExpenses(prev => prev.map(exp => exp.Id === editingExpense.Id ? updatedExpense : exp));
-          toast.success("Expense updated successfully!");
+          if (updatedExpense) {
+            setExpenses(prev => prev.map(exp => exp.Id === editingExpense.Id ? updatedExpense : exp));
+            toast.success("Expense updated successfully!");
+          } else {
+            toast.error("Failed to update expense");
+          }
         } else {
           const newExpense = await expenseService.create(expenseData);
-          setExpenses(prev => [...prev, newExpense]);
-          toast.success("Expense created successfully!");
+          if (newExpense) {
+            setExpenses(prev => [...prev, newExpense]);
+            toast.success("Expense created successfully!");
+          } else {
+            toast.error("Failed to create expense");
+          }
         }
         
         resetExpenseForm();
@@ -315,7 +343,6 @@ const handleEdit = () => {
 const completedTasks = tasks.filter(task => task.completed).length;
   const totalTasks = tasks.length;
   const progressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-
   return (
     <div className="space-y-6">
       {/* Header */}

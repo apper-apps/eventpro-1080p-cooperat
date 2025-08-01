@@ -36,11 +36,22 @@ const [tasks, setTasks] = useState([]);
         eventService.getAll()
       ]);
       
-      setTasks(tasksData);
-      setEvents(eventsData);
+      if (!tasksData || tasksData.length === 0) {
+        setTasks([]);
+      } else {
+        setTasks(tasksData);
+      }
+      
+      if (!eventsData || eventsData.length === 0) {
+        setEvents([]);
+      } else {
+        setEvents(eventsData);
+      }
     } catch (err) {
       setError("Failed to load tasks and events");
       console.error("Tasks error:", err);
+      setTasks([]);
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -56,11 +67,15 @@ const [tasks, setTasks] = useState([]);
   };
 const handleToggleTask = async (taskId, completed) => {
     try {
-      await taskService.update(taskId, { completed: !completed });
-      setTasks(prev => prev.map(task =>
-        task.Id === taskId ? { ...task, completed: !completed } : task
-      ));
-      toast.success(completed ? "Task marked as incomplete" : "Task completed!");
+      const updatedTask = await taskService.update(taskId, { completed: !completed });
+      if (updatedTask) {
+        setTasks(prev => prev.map(task =>
+          task.Id === taskId ? { ...task, completed: !completed } : task
+        ));
+        toast.success(completed ? "Task marked as incomplete" : "Task completed!");
+      } else {
+        toast.error("Failed to update task");
+      }
     } catch (err) {
       toast.error("Failed to update task");
       console.error("Update task error:", err);
@@ -97,11 +112,15 @@ const handleToggleTask = async (taskId, completed) => {
           eventId: parseInt(formData.eventId)
         });
         
-        setTasks(prev => [...prev, newTask]);
-        setFormData({ title: "", description: "", dueDate: "", eventId: "" });
-        setFormErrors({});
-        setShowModal(false);
-        toast.success("Task created successfully!");
+        if (newTask) {
+          setTasks(prev => [...prev, newTask]);
+          setFormData({ title: "", description: "", dueDate: "", eventId: "" });
+          setFormErrors({});
+          setShowModal(false);
+          toast.success("Task created successfully!");
+        } else {
+          toast.error("Failed to create task");
+        }
       } catch (err) {
         toast.error("Failed to create task");
         console.error("Create task error:", err);
@@ -123,10 +142,10 @@ const handleToggleTask = async (taskId, completed) => {
     }
   };
 
-  const groupTasksByEvent = () => {
+const groupTasksByEvent = () => {
     const grouped = {};
     tasks.forEach(task => {
-      const eventTitle = getEventTitle(task.eventId);
+      const eventTitle = getEventTitle(task.eventId?.Id || task.eventId);
       if (!grouped[eventTitle]) {
         grouped[eventTitle] = [];
       }
@@ -277,8 +296,7 @@ const handleToggleTask = async (taskId, completed) => {
               />
               
               <div className="space-y-2">
-                <Label htmlFor="eventId">Assign to Event</Label>
-                <select
+<select
                   id="eventId"
                   name="eventId"
                   value={formData.eventId}
